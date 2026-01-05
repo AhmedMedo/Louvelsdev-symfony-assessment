@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace App\Controller\V1;
 
 use App\Entity\Country;
-use App\Entity\Currency;
+use App\Form\CountryType;
 use App\Repository\CountryRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Nelmio\ApiDocBundle\Annotation\Model;
@@ -119,33 +119,23 @@ class CountryController extends AbstractController
     )]
     public function addCountry(Request $request): JsonResponse
     {
+        $country = new Country();
+
+        $form = $this->createForm(CountryType::class, $country);
         $data = json_decode($request->getContent(), true);
 
-        if (!isset($data['uuid']) || !isset($data['name'])) {
-            return $this->json(['error' => 'UUID and name are required'], Response::HTTP_BAD_REQUEST);
+        $form->submit($data);
+
+        if (!$form->isValid()) {
+            $errors = [];
+            foreach ($form->getErrors(true) as $error) {
+                $errors[] = $error->getMessage();
+            }
+            return $this->json(['errors' => $errors], Response::HTTP_BAD_REQUEST);
         }
 
-        // Check if country with UUID already exists
-        if ($this->countryRepository->findByUuid($data['uuid'])) {
+        if ($this->countryRepository->findByUuid($country->getUuid())) {
             return $this->json(['error' => 'Country with this UUID already exists'], Response::HTTP_CONFLICT);
-        }
-
-        $country = new Country();
-        $country->setUuid($data['uuid']);
-        $country->setName($data['name']);
-        $country->setRegion($data['region'] ?? null);
-        $country->setSubRegion($data['subRegion'] ?? null);
-        $country->setDemonym($data['demonym'] ?? null);
-        $country->setPopulation($data['population'] ?? null);
-        $country->setIndependent($data['independent'] ?? null);
-        $country->setFlag($data['flag'] ?? null);
-
-        // Handle currency
-        if (isset($data['currency'])) {
-            $currency = new Currency();
-            $currency->setName($data['currency']['name'] ?? null);
-            $currency->setSymbol($data['currency']['symbol'] ?? null);
-            $country->setCurrency($currency);
         }
 
         $this->countryRepository->save($country, true);
@@ -204,39 +194,17 @@ class CountryController extends AbstractController
             return $this->json(['error' => 'Country not found'], Response::HTTP_NOT_FOUND);
         }
 
+        $form = $this->createForm(CountryType::class, $country);
         $data = json_decode($request->getContent(), true);
 
-        if (isset($data['name'])) {
-            $country->setName($data['name']);
-        }
-        if (isset($data['region'])) {
-            $country->setRegion($data['region']);
-        }
-        if (isset($data['subRegion'])) {
-            $country->setSubRegion($data['subRegion']);
-        }
-        if (isset($data['demonym'])) {
-            $country->setDemonym($data['demonym']);
-        }
-        if (isset($data['population'])) {
-            $country->setPopulation($data['population']);
-        }
-        if (isset($data['independent'])) {
-            $country->setIndependent($data['independent']);
-        }
-        if (isset($data['flag'])) {
-            $country->setFlag($data['flag']);
-        }
+        $form->submit($data, false); // false = clearMissing, keeps existing values
 
-        // Handle currency update
-        if (isset($data['currency'])) {
-            $currency = $country->getCurrency();
-            if (isset($data['currency']['name'])) {
-                $currency->setName($data['currency']['name']);
+        if (!$form->isValid()) {
+            $errors = [];
+            foreach ($form->getErrors(true) as $error) {
+                $errors[] = $error->getMessage();
             }
-            if (isset($data['currency']['symbol'])) {
-                $currency->setSymbol($data['currency']['symbol']);
-            }
+            return $this->json(['errors' => $errors], Response::HTTP_BAD_REQUEST);
         }
 
         $this->entityManager->flush();
