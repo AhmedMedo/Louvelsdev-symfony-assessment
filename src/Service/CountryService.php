@@ -11,12 +11,11 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class CountryService
 {
-    private const REST_COUNTRIES_API = 'https://restcountries.com/v3.1/all?fields=cca3,name,region,subregion,demonyms,population,independent,flags,currencies';
-
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         private readonly CountryRepository $countryRepository,
-        private readonly EntityManagerInterface $entityManager
+        private readonly EntityManagerInterface $entityManager,
+        private readonly string $restCountriesApiUrl
     ) {
     }
 
@@ -32,7 +31,7 @@ class CountryService
         ];
 
         // Fetch data from API
-        $response = $this->httpClient->request('GET', self::REST_COUNTRIES_API);
+        $response = $this->httpClient->request('GET', $this->restCountriesApiUrl);
         $apiCountries = $response->toArray();
 
         // Get existing countries from database

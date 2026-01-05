@@ -1,0 +1,4 @@
+parameters:
+    # REST Countries API Configuration
+    # Copy this file to parameters.yml and configure your settings
+    rest_countries_api_url: 'https://restcountries.com/v3.1/all?fields=cca3,name,region,subregion,demonyms,population,independent,flags,currencies'
